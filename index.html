@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>جملة دايركت</title>
+<meta name="description" content="جملة دايركت: تصفّح موديلات جينز وملابس من مصانع مصرية واطلب مباشرة من المصنع على واتساب بأسعار الجملة.">
+<meta name="keywords" content="جملة جينز, مصانع جينز مصر, جملة ملابس, بنطلون جينز جملة, مصنع جينز, جملة دايركت">
+<link rel="canonical" href="https://nover-source.github.io/jomla/">
+<link rel="icon" href="https://nover-source.github.io/jomla/og.jpg">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_EG">
+<meta property="og:site_name" content="جملة دايركت">
+<meta property="og:title" content="جملة دايركت | اطلب جملة مباشرة من المصنع">
+<meta property="og:description" content="تصفّح موديلات مصانع الجينز واطلب مباشرة على واتساب بأسعار الجملة.">
+<meta property="og:url" content="https://nover-source.github.io/jomla/">
+<meta property="og:image" content="https://nover-source.github.io/jomla/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://nover-source.github.io/jomla/og.jpg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap">
 <style>
 /* منصة جملة: متجر للتجار + بوابة للمصانع + إدارة للمالك */
@@ -41,6 +54,7 @@ main{max-width:1100px;margin:0 auto;padding:14px max(16px,env(safe-area-inset-ri
 .cb h3{margin:0;font-size:15px;line-height:1.35;cursor:pointer}
 .fn{font-size:12px;color:var(--mu)}
 .pr{font-size:17px;font-weight:800;color:var(--act);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ptxt{font-size:13px;font-weight:700;color:var(--tx);line-height:1.5}
 .pr small{font-weight:400;color:var(--mu);font-size:12px}
 .qbtn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--act);color:var(--act);background:transparent;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;text-decoration:none;cursor:pointer;padding:0;flex:none;line-height:1}
 .wa{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--wa);color:var(--wa-tx);text-decoration:none;border:0;border-radius:12px;padding:10px;font-weight:800;cursor:pointer;margin-top:auto}
@@ -253,13 +267,18 @@ const daysLeft=f=>Math.ceil((new Date(f.paid_until)-new Date(today()))/864e5);
 const fac=id=>S.factories.find(f=>f.id===id)||{name:'',city:'',phone:'',whatsapp:''};
 const waTo=(num,text)=>`https://wa.me/${waNum(num)}?text=${encodeURIComponent(text)}`;
 const ownerWa=text=>S.settings.owner_whatsapp?waTo(S.settings.owner_whatsapp,text):'';
+const realTiers=p=>(p.tiers||[]).filter(t=>t&&t.min>0&&t.price>0);
+const noteOf=p=>{const n=(p.tiers||[]).find(t=>t&&t.note);return n?String(n.note):''};
+const hasPrice=p=>realTiers(p).length>0;
+const DEF_NOTE='للاستفسار عن الأسعار تواصل واتساب';
 function unitPrice(p,q){
-  const t=[...(p.tiers||[])].sort((a,b)=>a.min-b.min);
+  const t=realTiers(p).sort((a,b)=>a.min-b.min);
   if(!t.length||q<t[0].min)return null;
   let r=t[0].price;for(const x of t)if(q>=x.min)r=x.price;return r;
 }
-const minQty=p=>Math.min(...p.tiers.map(t=>t.min));
-const minPrice=p=>Math.min(...p.tiers.map(t=>t.price));
+const minQty=p=>hasPrice(p)?Math.min(...realTiers(p).map(t=>t.min)):1;
+const minPrice=p=>hasPrice(p)?Math.min(...realTiers(p).map(t=>t.price)):0;
+const priceTxt=p=>hasPrice(p)?`من ${minPrice(p)} ج`:(noteOf(p)||DEF_NOTE);
 function errMsg(e){
   const m=String((e&&e.message)||e||'');
   if(/Invalid login/i.test(m))return 'الرقم أو كلمة السر غلط';
@@ -401,10 +420,10 @@ function gridHTML(){
     const f=fac(p.factory_id),img=p.imgs&&p.imgs[0];
     const ask=waTo(f.whatsapp||f.phone,`السلام عليكم، عايز أسأل عن أسعار ${p.name} (${S.settings.name})`);
     return `<div class="card">
-      <div class="pic" onclick="openProduct('${p.id}')">${img?`<img src="${esc(img)}" alt="" loading="lazy">`:'👖'}${p.sold_out?'<span class="tag out">خلصان</span>':`<span class="tag">من ${minQty(p)} قطعة</span>`}</div>
+      <div class="pic" onclick="openProduct('${p.id}')">${img?`<img src="${esc(img)}" alt="" loading="lazy">`:'👖'}${p.sold_out?'<span class="tag out">خلصان</span>':(hasPrice(p)&&minQty(p)>1?`<span class="tag">من ${minQty(p)} قطعة</span>`:'')}</div>
       <div class="cb"><h3 onclick="openProduct('${p.id}')">${esc(p.name)}</h3>
       <div class="fn">${esc(f.name)}${f.verified?' ✔':''}${f.city?' • '+esc(f.city):''}</div>
-      <div class="pr">${money(minPrice(p))} ج <small>للقطعة</small><a class="qbtn" href="${ask}" target="_blank" rel="noopener" title="اسأل عن الأسعار" aria-label="اسأل عن الأسعار">؟</a></div>
+      <div class="pr">${hasPrice(p)?`${money(minPrice(p))} ج <small>للقطعة</small>`:`<span class="ptxt">${esc(noteOf(p)||DEF_NOTE)}</span>`}<a class="qbtn" href="${ask}" target="_blank" rel="noopener" title="اسأل عن الأسعار" aria-label="اسأل عن الأسعار">؟</a></div>
       ${p.sold_out?'<div class="wa off">غير متاح حاليًا</div>':`<a class="wa" href="${orderURL(p,null)}" target="_blank" rel="noopener">اطلب</a>`}</div></div>`;
   }).join('')+'</div>';
 }
@@ -421,15 +440,15 @@ function openProduct(id){
   curP=S.products.find(p=>p.id===id);if(!curP)return;
   sel={size:'',color:'',qty:String(minQty(curP))};
   const p=curP,f=fac(p.factory_id),sz=list(p.sizes),cl=list(p.colors),imgs=p.imgs||[];
-  const t=[...p.tiers].sort((a,b)=>a.min-b.min);
+  const t=realTiers(p).sort((a,b)=>a.min-b.min),nt=noteOf(p);
   modal(`<button class="x" onclick="closeM()" aria-label="إغلاق">✕</button>
    <div class="gmain" id="gmain">${imgs[0]?`<img src="${esc(imgs[0])}" alt="">`:'👖'}</div>
    ${imgs.length>1?`<div class="thumbs">${imgs.map((s,i)=>`<img src="${esc(s)}" class="${i?'':'on'}" onclick="setImg(${i})" alt="">`).join('')}</div>`:''}
    <h2>${esc(p.name)}</h2>
    <div class="fn">${esc(f.name)}${f.verified?' ✔ موثّق':''} ${f.city?'• '+esc(f.city):''}</div>
    ${p.descr?`<p style="margin:8px 0;color:var(--mu)">${esc(p.descr)}</p>`:''}
-   <div class="lbl">أسعار الجملة <button class="qbtn" type="button" onclick="$('#qhelp').hidden=!$('#qhelp').hidden" title="اسأل عن الأسعار" aria-label="اسأل عن الأسعار">؟</button></div>
-   <div class="tiers">${t.map(x=>`<div><span>من ${x.min} قطعة</span><b>${x.price} ج</b></div>`).join('')}</div>
+   <div class="lbl">${hasPrice(p)?'أسعار الجملة':'الأسعار'} <button class="qbtn" type="button" onclick="$('#qhelp').hidden=!$('#qhelp').hidden" title="اسأل عن الأسعار" aria-label="اسأل عن الأسعار">؟</button></div>
+   <div class="tiers">${t.length?t.map(x=>`<div><span>${x.min>1?`من ${x.min} قطعة`:'للقطعة'}</span><b>${x.price} ج</b></div>`).join(''):''}${nt||!t.length?`<div style="display:block;font-weight:700">${esc(nt||DEF_NOTE)}</div>`:''}</div>
    <div class="qhelp" id="qhelp" hidden>عايز سعر أحسن لكمية أكبر أو تسأل عن حاجة في السعر؟ كلّم المصنع على واتساب.<div class="bar"><a class="btn g" target="_blank" rel="noopener" href="${waTo(f.whatsapp||f.phone,`السلام عليكم، عايز أسأل عن أسعار ${p.name} (${S.settings.name})`)}">اسأل عن الأسعار</a></div></div>
    ${sz.length?`<div class="lbl">المقاس</div><div class="opts">${sz.map((s,i)=>`<button class="opt" onclick="pickOpt('size',${i},this)">${esc(s)}</button>`).join('')}</div>`:''}
    ${cl.length?`<div class="lbl">اللون</div><div class="opts">${cl.map((s,i)=>`<button class="opt" onclick="pickOpt('color',${i},this)">${esc(s)}</button>`).join('')}</div>`:''}
@@ -446,7 +465,7 @@ function pickOpt(k,i,el){
 }
 function updWA(){
   const p=curP,q=+sel.qty||0,u=unitPrice(p,q);
-  $('#pl').textContent=!q?'':u===null?`أقل كمية ${minQty(p)} قطعة`:`${u} ج للقطعة • الإجمالي ${money(u*q)} ج`;
+  $('#pl').textContent=!q?'':u===null?(hasPrice(p)?`أقل كمية ${minQty(p)} قطعة`:''):`${u} ج للقطعة • الإجمالي ${money(u*q)} ج`;
   $('#wawrap').innerHTML=p.sold_out?'<div class="wa big off">غير متاح حاليًا</div>':`<a class="wa big" href="${orderURL(p,sel)}" target="_blank" rel="noopener">اطلب على واتساب</a>`;
 }
 function showIntro(){
@@ -523,7 +542,7 @@ function factoryHTML(){
 function modelsHTML(mine,live){
   return `<div class="bar"><button class="btn" ${live?'':'disabled'} onclick="productModal()">+ موديل جديد</button>${live?'':'<span class="note">إضافة وتعديل الموديلات بتشتغل مع الاشتراك الشغال.</span>'}</div>`+
   (mine.length?mine.map(p=>`<div class="item" style="${p.hidden?'opacity:.55':''}"><div class="t">${p.imgs&&p.imgs[0]?`<img src="${esc(p.imgs[0])}" alt="">`:'👖'}</div>
-   <div class="m"><b>${esc(p.name)}</b><small>من ${minPrice(p)} ج • من ${minQty(p)} قطعة${p.sold_out?' • خلصان':''}${p.hidden?' • مخفي':''}</small></div>
+   <div class="m"><b>${esc(p.name)}</b><small>${esc(priceTxt(p))}${hasPrice(p)&&minQty(p)>1?' • من '+minQty(p)+' قطعة':''}${p.sold_out?' • خلصان':''}${p.hidden?' • مخفي':''}</small></div>
    <div class="ac"><button class="btn sm" ${live?'':'disabled'} onclick="productModal('${p.id}')">تعديل</button><button class="btn d sm" onclick="delProduct('${p.id}')">حذف</button></div></div>`).join(''):'<div class="empty">لسه مفيش موديلات</div>');
 }
 function infoHTML(f){
@@ -540,26 +559,33 @@ async function saveInfo(){
   toast('اتحفظ ✔');await reload();
 }
 function productModal(id){
-  const p=id?S.products.find(x=>x.id===id):{name:'',cat:'',descr:'',sizes:'',colors:'',imgs:[],tiers:[{min:50,price:0}],sold_out:false,hidden:false};
+  const p=id?S.products.find(x=>x.id===id):{name:'',cat:'',descr:'',sizes:'',colors:'',imgs:[],tiers:[],sold_out:false,hidden:false};
   tmp.imgs=[...(p.imgs||[])];
+  const rt=realTiers(p).sort((a,b)=>a.min-b.min),first=rt[0],rest=rt.slice(1);
   const help=ownerWa('السلام عليكم، عايز مساعدة في تحديد أسعار الجملة لموديلاتي');
   modal(`<button class="x" onclick="closeM()" aria-label="إغلاق">✕</button><h2 style="margin-top:0">${id?'تعديل موديل':'موديل جديد'}</h2>
   <label class="f">الصور (الأولى هي الرئيسية)</label><div class="imgs" id="imgs">${imgsHTML()}</div>
   <div class="row"><div><label class="f" for="pn">اسم الموديل</label><input id="pn" value="${esc(p.name)}"></div><div><label class="f" for="pc">القسم</label><input id="pc" value="${esc(p.cat)}" placeholder="جينز أولادي"></div></div>
   <label class="f" for="pd">وصف</label><textarea id="pd">${esc(p.descr)}</textarea>
   <div class="row"><div><label class="f" for="ps">المقاسات (بينها فاصلة)</label><input id="ps" value="${esc(p.sizes)}" placeholder="32, 34, 36"></div><div><label class="f" for="pcl">الألوان (بينها فاصلة)</label><input id="pcl" value="${esc(p.colors)}"></div></div>
-  <label class="f" for="pt" style="display:flex;align-items:center;gap:8px">أسعار الجملة (الكمية:السعر) <button class="qbtn" type="button" onclick="$('#thelp').hidden=!$('#thelp').hidden" aria-label="شرح الأسعار">؟</button></label>
-  <input id="pt" value="${(p.tiers||[]).map(t=>t.min+':'+t.price).join(', ')}" placeholder="50:260, 200:245, 500:230">
-  <div class="qhelp" id="thelp" hidden>اكتب كل شريحة بالشكل <b>الكمية:السعر</b> وافصل بينهم بفاصلة. مثال: <b>50:260, 200:245</b> يعني من 50 قطعة السعر 260، ومن 200 قطعة السعر 245.${help?`<div class="bar"><a class="btn g sm" target="_blank" rel="noopener" href="${help}">اسأل الإدارة عن الأسعار</a></div>`:''}</div>
+  <div class="row"><div><label class="f" for="ppr">السعر بالجنيه (اختياري)</label><input id="ppr" type="number" inputmode="decimal" min="0" value="${first?first.price:''}" placeholder="مثلا 260"></div><div><label class="f" for="pq">أقل كمية (اختياري)</label><input id="pq" type="number" inputmode="numeric" min="1" value="${first&&first.min>1?first.min:''}" placeholder="مثلا 50"></div></div>
+  <label class="f" for="pnote" style="display:flex;align-items:center;gap:8px">كلام يظهر مكان السعر (اختياري) <button class="qbtn" type="button" onclick="$('#thelp').hidden=!$('#thelp').hidden" aria-label="شرح الأسعار">؟</button></label>
+  <input id="pnote" value="${esc(noteOf(p))}" placeholder="للاستفسار عن الأسعار تواصل واتساب">
+  <div class="qhelp" id="thelp" hidden>كل خانات السعر اختيارية. لو سبتها فاضية هيظهر للتاجر "${DEF_NOTE}" وزرار "؟" بيفتح واتساب. ولو كتبت سعر وكلام، هيظهر الاتنين. تقدر كمان تكتب أي كلام تحبه مكان السعر.${help?`<div class="bar"><a class="btn g sm" target="_blank" rel="noopener" href="${help}">اسأل الإدارة عن الأسعار</a></div>`:''}</div>
+  <label class="f" for="pt">شرائح أسعار إضافية لكميات أكبر (اختياري)</label>
+  <input id="pt" value="${rest.map(t=>t.min+':'+t.price).join(', ')}" placeholder="200:245, 500:230">
+  <div class="note" style="font-size:12px;color:var(--mu)">الشكل: الكمية:السعر، وبينهم فاصلة.</div>
   <label class="f" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="po" style="width:auto" ${p.sold_out?'checked':''}> خلصان (غير متاح)</label>
   <label class="f" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ph2" style="width:auto" ${p.hidden?'checked':''}> إخفاء من المتجر</label>
   <div class="bar"><button class="btn" id="psave" onclick="saveProduct('${id||''}')">حفظ</button><button class="btn s" onclick="closeM()">إلغاء</button></div>`);
 }
 function parseTiers(s){return s.split(/[,،\n]/).map(x=>x.trim()).filter(Boolean).map(x=>{const [a,b]=x.split(':');return {min:+a,price:+b}}).filter(t=>t.min>0&&t.price>0)}
 async function saveProduct(id){
-  const tiers=parseTiers($('#pt').value);
   if(!$('#pn').value.trim()){toast('اكتب اسم الموديل');return}
-  if(!tiers.length){toast('اكتب الأسعار بالشكل 50:260, 200:245');return}
+  const tiers=[],pr=+$('#ppr').value,pq=Math.max(1,Math.floor(+$('#pq').value)||1),note=$('#pnote').value.trim();
+  if(pr>0)tiers.push({min:pq,price:pr});
+  tiers.push(...parseTiers($('#pt').value));
+  if(note)tiers.push({note});
   const o={factory_id:myFactory.id,name:$('#pn').value.trim(),cat:$('#pc').value.trim(),descr:$('#pd').value.trim(),sizes:$('#ps').value.trim(),colors:$('#pcl').value.trim(),imgs:[...tmp.imgs],tiers,sold_out:$('#po').checked,hidden:$('#ph2').checked};
   $('#psave').disabled=true;
   const r=id?await sb.from('products').update(o).eq('id',id):await sb.from('products').insert(o);
@@ -617,7 +643,7 @@ function delFactory(id){ask('حذف المصنع وكل موديلاته؟',asyn
 function adminProducts(){
   if(!S.products.length)return '<div class="empty">لسه مفيش موديلات</div>';
   return S.products.map(p=>`<div class="item" style="${p.hidden?'opacity:.55':''}"><div class="t">${p.imgs&&p.imgs[0]?`<img src="${esc(p.imgs[0])}" alt="">`:'👖'}</div>
-  <div class="m"><b>${esc(p.name)}</b><small>${esc(fac(p.factory_id).name)} • من ${minPrice(p)} ج${p.hidden?' • مخفي':''}</small></div>
+  <div class="m"><b>${esc(p.name)}</b><small>${esc(fac(p.factory_id).name)} • ${esc(priceTxt(p))}${p.hidden?' • مخفي':''}</small></div>
   <div class="ac"><button class="btn s sm" onclick="togProd('${p.id}',${!p.hidden})">${p.hidden?'إظهار':'إخفاء'}</button><button class="btn d sm" onclick="admDelProd('${p.id}')">حذف</button></div></div>`).join('');
 }
 async function togProd(id,h){const r=await sb.from('products').update({hidden:h}).eq('id',id);if(r.error)toast(errMsg(r.error));await reload()}
